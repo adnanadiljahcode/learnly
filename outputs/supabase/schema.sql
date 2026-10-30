@@ -88,7 +88,7 @@ create policy "Users can update own profile" on public.profiles for update to au
 drop policy if exists "Published courses are readable" on public.courses;
 create policy "Published courses are readable" on public.courses for select to authenticated using (is_published = true);
 drop policy if exists "Published lessons are readable" on public.lessons;
-create policy "Published lessons are readable" on public.lessons for select to authenticated using (exists (select 1 from public.courses c where c.id = course_id and c.is_published = true));
+create policy "Published lessons are readable" on public.lessons for select to authenticated using (exists (select 1 from public.courses c where c.id = public.lessons.course_id and c.is_published = true));
 
 drop policy if exists "Users manage own enrollments" on public.enrollments;
 create policy "Users manage own enrollments" on public.enrollments for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
