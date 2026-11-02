@@ -10,9 +10,10 @@ import ExploreCourses from "./pages/ExploreCourses";
 import Bookmarks from "./pages/Bookmarks";
 import Progress from "./pages/Progress";
 import SettingsPage from "./pages/Settings";
+import Admin from "./pages/Admin";
 import "./style.css";
 
-const routeTitles={"/overview":"Overview","/explore":"Explore courses","/bookmarks":"My bookmarks","/progress":"Progress","/settings":"Settings"};
+const routeTitles={"/overview":"Overview","/explore":"Explore courses","/bookmarks":"My bookmarks","/progress":"Progress","/settings":"Settings","/admin":"Administration"};
 const formatMinutes=(n=0)=>{const h=Math.floor(n/60),r=n%60;return h?`${h}h ${r}m`:`${r}m`;};
 const errorMessage=e=>e?.message||"Something went wrong. Please try again.";
 
@@ -22,7 +23,7 @@ function App(){
  const [path,setPath]=useState(()=>routeTitles[window.location.pathname]?window.location.pathname:"/overview");
  const [session,setSession]=useState(null),[authReady,setAuthReady]=useState(false);
  const [search,setSearch]=useState(""),[noticeOpen,setNoticeOpen]=useState(false),[menuOpen,setMenuOpen]=useState(false);
- const [profile,setProfile]=useState(null),[courses,setCourses]=useState([]),[enrollments,setEnrollments]=useState([]),[bookmarks,setBookmarks]=useState([]),[lessons,setLessons]=useState([]),[completedLessonIds,setCompletedLessonIds]=useState([]),[activity,setActivity]=useState([]);
+ const [profile,setProfile]=useState(null),[userRole,setUserRole]=useState("student"),[courses,setCourses]=useState([]),[enrollments,setEnrollments]=useState([]),[bookmarks,setBookmarks]=useState([]),[lessons,setLessons]=useState([]),[completedLessonIds,setCompletedLessonIds]=useState([]),[activity,setActivity]=useState([]);
  const [loading,setLoading]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
  const [selectedCourse,setSelectedCourse]=useState(null),[courseLessons,setCourseLessons]=useState([]),[lessonBusy,setLessonBusy]=useState(false),[settingsName,setSettingsName]=useState(""),[savingProfile,setSavingProfile]=useState(false);
 
@@ -33,13 +34,14 @@ function App(){
 
  const loadWorkspace=useCallback(async()=>{if(!session?.user)return;setLoading(true);setError("");const uid=session.user.id;try{const results=await Promise.all([
   supabase.from("profiles").select("id,full_name").eq("id",uid).maybeSingle(),
+  supabase.from("user_roles").select("role").eq("user_id",uid).maybeSingle(),
   supabase.from("courses").select("id,title,topic,description,lessons_count,estimated_minutes,level").eq("is_published",true).order("created_at",{ascending:true}),
   supabase.from("enrollments").select("id,course_id,enrolled_at,completed_at").eq("user_id",uid),
   supabase.from("bookmarks").select("id,course_id").eq("user_id",uid),
   supabase.from("lessons").select("id,course_id,title,position,duration_minutes").order("position"),
   supabase.from("lesson_progress").select("lesson_id,completed_at").eq("user_id",uid),
   supabase.from("learning_activity").select("activity_date,minutes").eq("user_id",uid).gte("activity_date",new Date(Date.now()-6*86400000).toISOString().slice(0,10)).order("activity_date")
- ]);const failed=results.find(r=>r.error);if(failed)throw failed.error;const [p,c,e,b,l,pr,a]=results;setProfile(p.data);setSettingsName(p.data?.full_name||session.user.user_metadata?.full_name||"");setCourses(c.data||[]);setEnrollments(e.data||[]);setBookmarks(b.data||[]);setLessons(l.data||[]);setCompletedLessonIds((pr.data||[]).map(x=>x.lesson_id));setActivity(a.data||[]);}catch(e){setError(errorMessage(e));}finally{setLoading(false);}},[session]);
+ ]);const failed=results.find(r=>r.error);if(failed)throw failed.error;const [p,roleResult,c,e,b,l,pr,a]=results;setProfile(p.data);setUserRole(roleResult.data?.role||"student");setSettingsName(p.data?.full_name||session.user.user_metadata?.full_name||"");setCourses(c.data||[]);setEnrollments(e.data||[]);setBookmarks(b.data||[]);setLessons(l.data||[]);setCompletedLessonIds((pr.data||[]).map(x=>x.lesson_id));setActivity(a.data||[]);}catch(e){setError(errorMessage(e));}finally{setLoading(false);}},[session]);
  useEffect(()=>{if(session?.user)loadWorkspace();},[session?.user?.id,loadWorkspace]);
 
  const bookmarkedIds=useMemo(()=>new Set(bookmarks.map(x=>x.course_id)),[bookmarks]);
@@ -64,10 +66,10 @@ function App(){
  if(!session)return <Auth onSignedIn={()=>{}}/>;
 
  const shared={bookmarkedIds,onToggleBookmark:toggleBookmark,onOpenCourse:openCourse,onEnroll:enroll,onNavigate:navigate};
- const page=path==="/explore"?<ExploreCourses courses={filteredCourses} {...shared}/>:path==="/bookmarks"?<Bookmarks courses={savedCourses} {...shared}/>:path==="/progress"?<Progress myCourses={myCourses} completedCourses={completedCourses} totalMinutes={totalMinutes} activityByDay={activityByDay} maxActivity={maxActivity}/>:path==="/settings"?<SettingsPage settingsName={settingsName} onNameChange={setSettingsName} email={session.user.email} onSave={saveProfile} savingProfile={savingProfile} onSignOut={signOut}/>:<Overview userName={userName} myCourses={myCourses} currentCourse={currentCourse} totalMinutes={totalMinutes} completedCourses={completedCourses} activityByDay={activityByDay} maxActivity={maxActivity} {...shared}/>;
+ const page=path==="/admin"?(userRole==="admin"?<Admin userId={session.user.id}/>:loading?<div className="loading-state"><LoaderCircle className="spin"/> Checking administrator access…</div>:<section className="page-intro"><div className="eyebrow">RESTRICTED AREA</div><h1>Administrator access required</h1><p className="welcome-sub">Your account does not have permission to view this workspace.</p></section>):path==="/explore"?<ExploreCourses courses={filteredCourses} {...shared}/>:path==="/bookmarks"?<Bookmarks courses={savedCourses} {...shared}/>:path==="/progress"?<Progress myCourses={myCourses} completedCourses={completedCourses} totalMinutes={totalMinutes} activityByDay={activityByDay} maxActivity={maxActivity}/>:path==="/settings"?<SettingsPage settingsName={settingsName} onNameChange={setSettingsName} email={session.user.email} onSave={saveProfile} savingProfile={savingProfile} onSignOut={signOut}/>:<Overview userName={userName} myCourses={myCourses} currentCourse={currentCourse} totalMinutes={totalMinutes} completedCourses={completedCourses} activityByDay={activityByDay} maxActivity={maxActivity} {...shared}/>;
 
  return <div className="app-shell">
-  <Sidebar path={path} userName={userName} email={session.user.email} bookmarkCount={bookmarks.length} totalMinutes={totalMinutes} onSignOut={signOut} open={menuOpen} onNavigate={navigate}/>
+  <Sidebar path={path} isAdmin={userRole==="admin"} userName={userName} email={session.user.email} bookmarkCount={bookmarks.length} totalMinutes={totalMinutes} onSignOut={signOut} open={menuOpen} onNavigate={navigate}/>
   <main className="main-area"><Header title={routeTitles[path]} search={search} onSearch={e=>setSearch(e.target.value)} noticeOpen={noticeOpen} onToggleNotice={()=>setNoticeOpen(v=>!v)} notices={notices} menuOpen={menuOpen} onToggleMenu={()=>setMenuOpen(v=>!v)} userName={userName} onNavigate={navigate}/>
    <div className="content">{error&&<div className="workspace-alert error-alert" role="alert"><AlertCircle size={16}/>{error}<button onClick={()=>setError("")}><X size={15}/></button></div>}{success&&<div className="workspace-alert success-alert" role="status"><CheckCircle2 size={16}/>{success}<button onClick={()=>setSuccess("")}><X size={15}/></button></div>}{loading&&<div className="loading-banner"><LoaderCircle className="spin" size={16}/> Syncing your learning workspace…</div>}{page}<footer className="footer"><span>© {new Date().getFullYear()} Learnly</span><span>Made for curious minds <span className="footer-heart">♥</span></span></footer></div>
   </main>
