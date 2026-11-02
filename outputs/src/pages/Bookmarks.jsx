@@ -1,0 +1,3 @@
+import React from "react";
+import CourseGrid from "../components/CourseGrid";
+export default function Bookmarks(props){return <><section className="page-intro"><div className="eyebrow">SAVED FOR LATER</div><h1>My bookmarks</h1><p className="welcome-sub">Courses you've saved for another day.</p></section><section className="courses-section"><div className="section-heading"><div><div className="eyebrow">YOUR SAVED LIST</div><h2>Saved courses <span className="course-count">{props.courses.length}</span></h2></div></div><CourseGrid courses={props.courses} active="My bookmarks" {...props}/></section></>;}
