@@ -1,0 +1,3 @@
+import React from "react";
+import CourseGrid from "../components/CourseGrid";
+export default function ExploreCourses(props){return <><section className="page-intro"><div className="eyebrow">GROW YOUR SKILLS</div><h1>Explore courses</h1><p className="welcome-sub">Discover a course and add it to your learning plan.</p></section><section className="courses-section"><div className="section-heading"><div><div className="eyebrow">FIND YOUR NEXT SKILL</div><h2>Course library <span className="course-count">{props.courses.length}</span></h2></div></div><CourseGrid courses={props.courses} active="Explore courses" {...props}/></section></>;}
