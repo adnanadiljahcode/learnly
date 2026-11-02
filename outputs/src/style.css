@@ -1475,3 +1475,8 @@ body {
 .setup-code { white-space: pre-wrap; padding: 14px; background: #f7f7fb; border-radius: 8px; color: #55546b; font-size: 11px; }
 @media (max-width: 850px) { .progress-summary { grid-template-columns: 1fr; } .progress-row { grid-template-columns: 1fr 42px; } .progress-row-track { grid-column: 1/-1; grid-row: 2; } }
 @media (max-width: 560px) { .progress-row { grid-template-columns: 1fr 38px; } .lesson-row { align-items: flex-start; flex-wrap: wrap; } .lesson-complete { margin-left: 31px; } .course-modal { padding: 17px; } }
+
+/* Real route links retain the existing sidebar and breadcrumb styling. */
+a.nav-item { text-decoration: none; }
+.breadcrumb a { color: inherit; text-decoration: none; }
+.breadcrumb a:hover { color: #6562df; }
