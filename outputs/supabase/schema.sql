@@ -133,3 +133,63 @@ values
 ('20000000-0000-4000-8000-000000000008','10000000-0000-4000-8000-000000000003','Brand voice and identity',2,20,'Create a consistent verbal and visual identity.'),
 ('20000000-0000-4000-8000-000000000009','10000000-0000-4000-8000-000000000003','Building a brand strategy',3,20,'Bring research and positioning together into a practical strategy.')
 on conflict (id) do nothing;
+
+
+-- Administrator access and management policies.
+-- Existing accounts are ordinary students until an administrator role is explicitly granted.
+create table if not exists public.user_roles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  role text not null check (role in ('admin','instructor','student')),
+  created_at timestamptz not null default now()
+);
+
+alter table public.user_roles enable row level security;
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.user_roles
+    where user_id = auth.uid() and role = 'admin'
+  );
+$$;
+
+drop policy if exists "Users can read own role or admins can read all" on public.user_roles;
+create policy "Users can read own role or admins can read all"
+on public.user_roles for select to authenticated
+using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "Admins manage user roles" on public.user_roles;
+create policy "Admins manage user roles"
+on public.user_roles for all to authenticated
+using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "Admins can read all profiles" on public.profiles;
+create policy "Admins can read all profiles"
+on public.profiles for select to authenticated
+using (public.is_admin());
+
+drop policy if exists "Admins can manage courses" on public.courses;
+create policy "Admins can manage courses"
+on public.courses for all to authenticated
+using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "Admins can manage lessons" on public.lessons;
+create policy "Admins can manage lessons"
+on public.lessons for all to authenticated
+using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "Admins can read all enrollments" on public.enrollments;
+create policy "Admins can read all enrollments"
+on public.enrollments for select to authenticated
+using (public.is_admin());
+
+-- After creating your account, replace the email below and run this statement
+-- in the Supabase SQL Editor to grant the first administrator:
+-- insert into public.user_roles (user_id, role)
+-- select id, 'admin' from auth.users where email = 'YOUR_ADMIN_EMAIL'
+-- on conflict (user_id) do update set role = excluded.role;
