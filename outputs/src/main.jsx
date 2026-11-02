@@ -23,7 +23,7 @@ function App(){
  const [path,setPath]=useState(()=>routeTitles[window.location.pathname]?window.location.pathname:"/overview");
  const [session,setSession]=useState(null),[authReady,setAuthReady]=useState(false);
  const [search,setSearch]=useState(""),[noticeOpen,setNoticeOpen]=useState(false),[menuOpen,setMenuOpen]=useState(false);
- const [profile,setProfile]=useState(null),[userRole,setUserRole]=useState("student"),[courses,setCourses]=useState([]),[enrollments,setEnrollments]=useState([]),[bookmarks,setBookmarks]=useState([]),[lessons,setLessons]=useState([]),[completedLessonIds,setCompletedLessonIds]=useState([]),[activity,setActivity]=useState([]);
+ const [profile,setProfile]=useState(null),[userRole,setUserRole]=useState(null),[courses,setCourses]=useState([]),[enrollments,setEnrollments]=useState([]),[bookmarks,setBookmarks]=useState([]),[lessons,setLessons]=useState([]),[completedLessonIds,setCompletedLessonIds]=useState([]),[activity,setActivity]=useState([]);
  const [loading,setLoading]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
  const [selectedCourse,setSelectedCourse]=useState(null),[courseLessons,setCourseLessons]=useState([]),[lessonBusy,setLessonBusy]=useState(false),[settingsName,setSettingsName]=useState(""),[savingProfile,setSavingProfile]=useState(false);
 
@@ -32,7 +32,7 @@ function App(){
 
  useEffect(()=>{if(!isSupabaseConfigured)return;let mounted=true;supabase.auth.getSession().then(({data,error:e})=>{if(!mounted)return;if(e)setError(errorMessage(e));setSession(data?.session||null);setAuthReady(true);});const {data:listener}=supabase.auth.onAuthStateChange((_event,next)=>{setSession(next);setAuthReady(true);});return()=>{mounted=false;listener.subscription.unsubscribe();};},[]);
 
- const loadWorkspace=useCallback(async()=>{if(!session?.user)return;setLoading(true);setError("");const uid=session.user.id;try{const results=await Promise.all([
+ const loadWorkspace=useCallback(async()=>{if(!session?.user)return;setUserRole(null);setLoading(true);setError("");const uid=session.user.id;try{const results=await Promise.all([
   supabase.from("profiles").select("id,full_name").eq("id",uid).maybeSingle(),
   supabase.from("user_roles").select("role").eq("user_id",uid).maybeSingle(),
   supabase.from("courses").select("id,title,topic,description,lessons_count,estimated_minutes,level").eq("is_published",true).order("created_at",{ascending:true}),
