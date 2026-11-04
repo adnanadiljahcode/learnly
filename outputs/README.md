@@ -44,3 +44,5 @@ The sample course catalog is inserted by the SQL script. New accounts start with
 - Configure email confirmation in Supabase Auth according to your desired sign-up flow.
 - The frontend intentionally uses only the publishable/anon key; RLS is the security boundary for user data.
 - If credentials are missing, the app displays setup instructions instead of crashing during startup.
+
+- ### https://glorious-barnacle-vpr4xpj446jvf5jx-5173.app.github.dev/overview
