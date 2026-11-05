@@ -225,11 +225,15 @@ function App() {
     setError("");
     setSuccess("");
     try {
-      await recordLessonCompletion(session.user.id, lesson);
+      const recorded = await recordLessonCompletion(session.user.id, lesson);
       setCompletedLessonIds((ids) =>
         ids.includes(lesson.id) ? ids : [...ids, lesson.id],
       );
-      setSuccess("Lesson marked complete. Your progress has been updated.");
+      setSuccess(
+        recorded
+          ? "Lesson marked complete. Your progress has been updated."
+          : "This lesson was already completed. Your progress is up to date.",
+      );
       await loadWorkspace();
     } catch (e) {
       setError(errorMessage(e));
