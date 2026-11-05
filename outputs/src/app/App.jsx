@@ -4,7 +4,6 @@ import { useWorkspace } from "../hooks/useWorkspace";
 import {
   Sparkles,
   LoaderCircle,
-  AlertCircle,
 } from "lucide-react";
 import { Auth } from "../Auth";
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
@@ -17,7 +16,6 @@ import ExploreCourses from "../pages/ExploreCourses";
 import Bookmarks from "../pages/Bookmarks";
 import Progress from "../pages/Progress";
 import SettingsPage from "../pages/Settings";
-import { formatMinutes } from "../utils/formatMinutes";
 import { errorMessage } from "../utils/errorMessage";
 import { addBookmark, removeBookmark, createEnrollment, fetchCourseLessons } from "../services/courseService";
 import { recordLessonCompletion } from "../services/learningService";
@@ -93,6 +91,7 @@ function App() {
     if (window.location.pathname !== next)
       window.history.pushState({}, "", next);
     setPath(next);
+    setSelectedCourse(null);
     setSearch("");
     setMenuOpen(false);
     setNoticeOpen(false);
@@ -269,7 +268,7 @@ function App() {
         </div>
       </main>
     );
-  if (!session) return <Auth onSignedIn={() => {}} />;
+  if (!session) return <Auth />;
 
   const shared = {
     bookmarkedIds,
