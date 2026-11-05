@@ -20,6 +20,10 @@ import Progress from "./pages/Progress";
 import SettingsPage from "./pages/Settings";
 import { formatMinutes } from "./utils/formatMinutes";
 import { errorMessage } from "./utils/errorMessage";
+import { fetchWorkspace } from "./services/workspaceService";
+import { addBookmark, removeBookmark, createEnrollment, fetchCourseLessons } from "./services/courseService";
+import { recordLessonCompletion } from "./services/learningService";
+import { saveUserProfile } from "./services/profileService";
 import "./style.css";
 
 const routeTitles = {
@@ -140,55 +144,20 @@ function App() {
     setError("");
     const uid = session.user.id;
     try {
-      const results = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id,full_name")
-          .eq("id", uid)
-          .maybeSingle(),
-        supabase
-          .from("courses")
-          .select(
-            "id,title,topic,description,lessons_count,estimated_minutes,level",
-          )
-          .eq("is_published", true)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("enrollments")
-          .select("id,course_id,enrolled_at,completed_at")
-          .eq("user_id", uid),
-        supabase.from("bookmarks").select("id,course_id").eq("user_id", uid),
-        supabase
-          .from("lessons")
-          .select("id,course_id,title,position,duration_minutes")
-          .order("position"),
-        supabase
-          .from("lesson_progress")
-          .select("lesson_id,completed_at")
-          .eq("user_id", uid),
-        supabase
-          .from("learning_activity")
-          .select("activity_date,minutes")
-          .eq("user_id", uid)
-          .gte(
-            "activity_date",
-            new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10),
-          )
-          .order("activity_date"),
-      ]);
-      const failed = results.find((r) => r.error);
-      if (failed) throw failed.error;
-      const [p, c, e, b, l, pr, a] = results;
-      setProfile(p.data);
-      setSettingsName(
-        p.data?.full_name || session.user.user_metadata?.full_name || "",
+      const workspace = await fetchWorkspace(
+        uid,
+        new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10),
       );
-      setCourses(c.data || []);
-      setEnrollments(e.data || []);
-      setBookmarks(b.data || []);
-      setLessons(l.data || []);
-      setCompletedLessonIds((pr.data || []).map((x) => x.lesson_id));
-      setActivity(a.data || []);
+      setProfile(workspace.profile);
+      setSettingsName(
+        workspace.profile?.full_name || session.user.user_metadata?.full_name || "",
+      );
+      setCourses(workspace.courses);
+      setEnrollments(workspace.enrollments);
+      setBookmarks(workspace.bookmarks);
+      setLessons(workspace.lessons);
+      setCompletedLessonIds(workspace.completedLessonIds);
+      setActivity(workspace.activity);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -268,20 +237,10 @@ function App() {
     const existing = bookmarks.find((x) => x.course_id === course.id);
     try {
       if (existing) {
-        const { error: e } = await supabase
-          .from("bookmarks")
-          .delete()
-          .eq("id", existing.id)
-          .eq("user_id", session.user.id);
-        if (e) throw e;
+        await removeBookmark(session.user.id, existing.id);
         setBookmarks((items) => items.filter((x) => x.id !== existing.id));
       } else {
-        const { data, error: e } = await supabase
-          .from("bookmarks")
-          .insert({ user_id: session.user.id, course_id: course.id })
-          .select("id,course_id")
-          .single();
-        if (e) throw e;
+        const data = await addBookmark(session.user.id, course.id);
         setBookmarks((items) => [...items, data]);
       }
     } catch (e) {
@@ -292,12 +251,7 @@ function App() {
     setError("");
     setSuccess("");
     try {
-      const { data, error: e } = await supabase
-        .from("enrollments")
-        .insert({ user_id: session.user.id, course_id: course.id })
-        .select("id,course_id,enrolled_at,completed_at")
-        .single();
-      if (e) throw e;
+      const data = await createEnrollment(session.user.id, course.id);
       setEnrollments((items) => [...items, data]);
       setSuccess(`You're enrolled in ${course.title}.`);
       navigate("/overview");
@@ -309,52 +263,19 @@ function App() {
     setSelectedCourse(course);
     setCourseLessons([]);
     setError("");
-    const { data, error: e } = await supabase
-      .from("lessons")
-      .select("id,course_id,title,position,duration_minutes,content")
-      .eq("course_id", course.id)
-      .order("position");
-    if (e) setError(errorMessage(e));
-    else setCourseLessons(data || []);
+    try {
+      const data = await fetchCourseLessons(course.id);
+      setCourseLessons(data);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
   }
   async function completeLesson(lesson) {
     setLessonBusy(true);
     setError("");
     setSuccess("");
     try {
-      const { error: e } = await supabase
-        .from("lesson_progress")
-        .upsert(
-          {
-            user_id: session.user.id,
-            lesson_id: lesson.id,
-            completed_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,lesson_id" },
-        );
-      if (e) throw e;
-      const today = new Date().toISOString().slice(0, 10),
-        { data: existing, error: readError } = await supabase
-          .from("learning_activity")
-          .select("id,minutes")
-          .eq("user_id", session.user.id)
-          .eq("activity_date", today)
-          .maybeSingle();
-      if (readError) throw readError;
-      const mins = Math.max(1, Number(lesson.duration_minutes || 15));
-      const write = existing
-        ? await supabase
-            .from("learning_activity")
-            .update({ minutes: Number(existing.minutes || 0) + mins })
-            .eq("id", existing.id)
-        : await supabase
-            .from("learning_activity")
-            .insert({
-              user_id: session.user.id,
-              activity_date: today,
-              minutes: mins,
-            });
-      if (write.error) throw write.error;
+      await recordLessonCompletion(session.user.id, lesson);
       setCompletedLessonIds((ids) =>
         ids.includes(lesson.id) ? ids : [...ids, lesson.id],
       );
@@ -372,18 +293,11 @@ function App() {
     setError("");
     setSuccess("");
     try {
-      const { error: e } = await supabase
-        .from("profiles")
-        .upsert(
-          { id: session.user.id, full_name: settingsName.trim() },
-          { onConflict: "id" },
-        );
-      if (e) throw e;
-      const { error: authError } = await supabase.auth.updateUser({
-        data: { full_name: settingsName.trim() },
-      });
-      if (authError) throw authError;
-      setProfile({ id: session.user.id, full_name: settingsName.trim() });
+      const savedProfile = await saveUserProfile(
+        session.user.id,
+        settingsName.trim(),
+      );
+      setProfile(savedProfile);
       setSuccess("Your profile has been saved.");
     } catch (e) {
       setError(errorMessage(e));
