@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "./hooks/useAuth";
 import { createRoot } from "react-dom/client";
 import {
   Sparkles,
@@ -72,8 +73,7 @@ function App() {
       ? window.location.pathname
       : "/overview",
   );
-  const [session, setSession] = useState(null),
-    [authReady, setAuthReady] = useState(false);
+  const { session, authReady, authError } = useAuth();
   const [search, setSearch] = useState(""),
     [noticeOpen, setNoticeOpen] = useState(false),
     [menuOpen, setMenuOpen] = useState(false);
@@ -117,26 +117,7 @@ function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  useEffect(() => {
-    if (!isSupabaseConfigured) return;
-    let mounted = true;
-    supabase.auth.getSession().then(({ data, error: e }) => {
-      if (!mounted) return;
-      if (e) setError(errorMessage(e));
-      setSession(data?.session || null);
-      setAuthReady(true);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, next) => {
-        setSession(next);
-        setAuthReady(true);
-      },
-    );
-    return () => {
-      mounted = false;
-      listener.subscription.unsubscribe();
-    };
-  }, []);
+
 
   const loadWorkspace = useCallback(async () => {
     if (!session?.user) return;
@@ -310,6 +291,7 @@ function App() {
     navigate("/overview");
   }
 
+  if (authError && !error) setError(authError);
   if (!isSupabaseConfigured) return <SetupRequired />;
   if (!authReady)
     return (
