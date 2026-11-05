@@ -1079,7 +1079,7 @@ body {
   display: flex;
   justify-content: space-between;
   color: #b0b0bd;
-  font-size: 9px;
+--font-size: 9px;
   padding-top: 17px;
 }
 .footer-heart {

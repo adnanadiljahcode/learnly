@@ -346,9 +346,9 @@ function App() {
             onClearSuccess={() => setSuccess("")}
           />
           {page}
-          <footer className="footer">
+          <footer className="footer text-sm">
             <span>© {new Date().getFullYear()} Learnly</span>
-            <span>adnan.adil.jah+learnly@gmail.com</span>
+            <span className="font-semibold">adnan.adil.jah+learnly@gmail.com</span>
             <span>
               Made for curious minds <span className="footer-heart">♥</span>
             </span>
