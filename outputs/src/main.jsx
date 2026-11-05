@@ -6,15 +6,13 @@ import {
   Sparkles,
   LoaderCircle,
   AlertCircle,
-  CheckCircle2,
-  X,
-  Circle,
-  Check,
 } from "lucide-react";
 import { Auth } from "./Auth";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import CourseModal from "./components/CourseModal";
+import WorkspaceAlerts from "./components/WorkspaceAlerts";
 import Overview from "./pages/Overview";
 import ExploreCourses from "./pages/ExploreCourses";
 import Bookmarks from "./pages/Bookmarks";
@@ -343,30 +341,13 @@ function App() {
           onNavigate={navigate}
         />
         <div className="content">
-          {error && (
-            <div className="workspace-alert error-alert" role="alert">
-              <AlertCircle size={16} />
-              {error}
-              <button onClick={() => setError("")}>
-                <X size={15} />
-              </button>
-            </div>
-          )}
-          {success && (
-            <div className="workspace-alert success-alert" role="status">
-              <CheckCircle2 size={16} />
-              {success}
-              <button onClick={() => setSuccess("")}>
-                <X size={15} />
-              </button>
-            </div>
-          )}
-          {loading && (
-            <div className="loading-banner">
-              <LoaderCircle className="spin" size={16} /> Syncing your learning
-              workspace…
-            </div>
-          )}
+          <WorkspaceAlerts
+            error={error}
+            success={success}
+            loading={loading}
+            onClearError={() => setError("")}
+            onClearSuccess={() => setSuccess("")}
+          />
           {page}
           <footer className="footer">
             <span>© {new Date().getFullYear()} Learnly</span>
@@ -376,85 +357,15 @@ function App() {
           </footer>
         </div>
       </main>
-      {selectedCourse && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setSelectedCourse(null);
-          }}
-        >
-          <section
-            className="course-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="course-modal-title"
-          >
-            <div className="modal-heading">
-              <div>
-                <div className="eyebrow">COURSE DETAILS</div>
-                <h2 id="course-modal-title">{selectedCourse.title}</h2>
-              </div>
-              <button
-                className="icon-button"
-                onClick={() => setSelectedCourse(null)}
-                aria-label="Close course"
-              >
-                <X size={19} />
-              </button>
-            </div>
-            <p>
-              {selectedCourse.description ||
-                "Follow the lessons below and track your learning progress."}
-            </p>
-            {!selectedCourse.enrolled && (
-              <button
-                className="continue-button"
-                onClick={() => enroll(selectedCourse)}
-              >
-                Enroll in course
-              </button>
-            )}
-            <div className="lesson-list">
-              {courseLessons.map((lesson) => {
-                const done = completedLessonIds.includes(lesson.id);
-                return (
-                  <article className="lesson-row" key={lesson.id}>
-                    <div className="lesson-status">
-                      {done ? <CheckCircle2 size={19} /> : <Circle size={19} />}
-                    </div>
-                    <div className="lesson-copy">
-                      <strong>
-                        {lesson.position}. {lesson.title}
-                      </strong>
-                      <span>{formatMinutes(lesson.duration_minutes || 0)}</span>
-                      {lesson.content && <p>{lesson.content}</p>}
-                    </div>
-                    {selectedCourse.enrolled && (
-                      <button
-                        disabled={done || lessonBusy}
-                        className="lesson-complete"
-                        onClick={() => completeLesson(lesson)}
-                      >
-                        {done
-                          ? "Completed"
-                          : lessonBusy
-                            ? "Saving…"
-                            : "Mark complete"}
-                      </button>
-                    )}
-                  </article>
-                );
-              })}
-              {courseLessons.length === 0 && (
-                <p className="empty-copy">
-                  No lessons have been added to this course yet.
-                </p>
-              )}
-            </div>
-          </section>
-        </div>
-      )}
+      <CourseModal
+        course={selectedCourse}
+        lessons={courseLessons}
+        completedLessonIds={completedLessonIds}
+        lessonBusy={lessonBusy}
+        onClose={() => setSelectedCourse(null)}
+        onEnroll={enroll}
+        onCompleteLesson={completeLesson}
+      />
     </div>
   );
 }
