@@ -1,7 +1,8 @@
 import React from "react";
 import { Clock3, Flame, Check, Play, ArrowUpRight, Sparkles } from "lucide-react";
 import CourseGrid from "../components/CourseGrid";
-const formatMinutes=(n=0)=>{const h=Math.floor(n/60),m=n%60;return h?`${h}h ${m}m`:`${m}m`;};
+import { formatMinutes } from "../utils/formatMinutes";
+
 export default function Overview({userName,myCourses,currentCourse,totalMinutes,completedCourses,activityByDay,maxActivity,bookmarkedIds,onToggleBookmark,onOpenCourse,onEnroll,onNavigate}) {
  return <>
   <section className="welcome-row"><div><div className="eyebrow">{new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"}).toUpperCase()}</div><h1>Welcome back, {userName} <span className="wave">✦</span></h1><p className="welcome-sub">A little progress each day adds up to big results.</p></div><div className="streak-pill"><span className="streak-flame"><Flame size={17} fill="currentColor"/></span><strong>{activityByDay.filter(d=>d.minutes>0).length} active days this week</strong></div></section>
