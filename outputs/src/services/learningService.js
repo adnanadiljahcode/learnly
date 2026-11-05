@@ -1,6 +1,15 @@
 import { supabase } from "../lib/supabase";
 
 export async function recordLessonCompletion(userId, lesson) {
+  const { data: priorCompletion, error: lookupError } = await supabase
+    .from("lesson_progress")
+    .select("lesson_id")
+    .eq("user_id", userId)
+    .eq("lesson_id", lesson.id)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (priorCompletion) return false;
+
   const { error } = await supabase
     .from("lesson_progress")
     .upsert(
@@ -34,4 +43,5 @@ export async function recordLessonCompletion(userId, lesson) {
         minutes,
       });
   if (write.error) throw write.error;
+  return true;
 }
