@@ -348,6 +348,7 @@ function App() {
           {page}
           <footer className="footer">
             <span>© {new Date().getFullYear()} Learnly</span>
+            <span>adnan.adil.jah+learnly@gmail.com</span>
             <span>
               Made for curious minds <span className="footer-heart">♥</span>
             </span>
