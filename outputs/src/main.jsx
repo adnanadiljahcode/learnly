@@ -18,6 +18,8 @@ import ExploreCourses from "./pages/ExploreCourses";
 import Bookmarks from "./pages/Bookmarks";
 import Progress from "./pages/Progress";
 import SettingsPage from "./pages/Settings";
+import { formatMinutes } from "./utils/formatMinutes";
+import { errorMessage } from "./utils/errorMessage";
 import "./style.css";
 
 const routeTitles = {
@@ -27,13 +29,6 @@ const routeTitles = {
   "/progress": "Progress",
   "/settings": "Settings",
 };
-const formatMinutes = (n = 0) => {
-  const h = Math.floor(n / 60),
-    r = n % 60;
-  return h ? `${h}h ${r}m` : `${r}m`;
-};
-const errorMessage = (e) =>
-  e?.message || "Something went wrong. Please try again.";
 
 function SetupRequired() {
   return (
