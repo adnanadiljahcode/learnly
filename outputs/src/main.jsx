@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./hooks/useAuth";
+import { useWorkspace } from "./hooks/useWorkspace";
 import { createRoot } from "react-dom/client";
 import {
   Sparkles,
@@ -21,7 +22,6 @@ import Progress from "./pages/Progress";
 import SettingsPage from "./pages/Settings";
 import { formatMinutes } from "./utils/formatMinutes";
 import { errorMessage } from "./utils/errorMessage";
-import { fetchWorkspace } from "./services/workspaceService";
 import { addBookmark, removeBookmark, createEnrollment, fetchCourseLessons } from "./services/courseService";
 import { recordLessonCompletion } from "./services/learningService";
 import { saveUserProfile } from "./services/profileService";
@@ -77,20 +77,19 @@ function App() {
   const [search, setSearch] = useState(""),
     [noticeOpen, setNoticeOpen] = useState(false),
     [menuOpen, setMenuOpen] = useState(false);
-  const [profile, setProfile] = useState(null),
-    [courses, setCourses] = useState([]),
-    [enrollments, setEnrollments] = useState([]),
-    [bookmarks, setBookmarks] = useState([]),
-    [lessons, setLessons] = useState([]),
-    [completedLessonIds, setCompletedLessonIds] = useState([]),
-    [activity, setActivity] = useState([]);
-  const [loading, setLoading] = useState(false),
-    [error, setError] = useState(""),
-    [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  useEffect(() => {
+    if (authError) setError(authError);
+  }, [authError]);
+  const {
+    profile, setProfile, courses, setCourses, enrollments, setEnrollments,
+    bookmarks, setBookmarks, lessons, completedLessonIds, setCompletedLessonIds,
+    activity, loading, settingsName, setSettingsName, loadWorkspace,
+  } = useWorkspace(session, setError);
   const [selectedCourse, setSelectedCourse] = useState(null),
     [courseLessons, setCourseLessons] = useState([]),
     [lessonBusy, setLessonBusy] = useState(false),
-    [settingsName, setSettingsName] = useState(""),
     [savingProfile, setSavingProfile] = useState(false);
 
   const navigate = useCallback((to) => {
@@ -118,36 +117,6 @@ function App() {
   }, []);
 
 
-
-  const loadWorkspace = useCallback(async () => {
-    if (!session?.user) return;
-    setLoading(true);
-    setError("");
-    const uid = session.user.id;
-    try {
-      const workspace = await fetchWorkspace(
-        uid,
-        new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10),
-      );
-      setProfile(workspace.profile);
-      setSettingsName(
-        workspace.profile?.full_name || session.user.user_metadata?.full_name || "",
-      );
-      setCourses(workspace.courses);
-      setEnrollments(workspace.enrollments);
-      setBookmarks(workspace.bookmarks);
-      setLessons(workspace.lessons);
-      setCompletedLessonIds(workspace.completedLessonIds);
-      setActivity(workspace.activity);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [session]);
-  useEffect(() => {
-    if (session?.user) loadWorkspace();
-  }, [session?.user?.id, loadWorkspace]);
 
   const bookmarkedIds = useMemo(
     () => new Set(bookmarks.map((x) => x.course_id)),
@@ -291,7 +260,6 @@ function App() {
     navigate("/overview");
   }
 
-  if (authError && !error) setError(authError);
   if (!isSupabaseConfigured) return <SetupRequired />;
   if (!authReady)
     return (
